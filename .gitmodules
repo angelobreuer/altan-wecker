@@ -1,0 +1,6 @@
+[submodule "embedded/components/hagl"]
+	path = embedded/components/hagl
+	url = https://github.com/tuupola/hagl
+[submodule "embedded/components/hagl_hal"]
+	path = embedded/components/hagl_hal
+	url = https://github.com/tuupola/hagl_esp_mipi
