@@ -1,4 +1,5 @@
 #include <alarm/AlarmManager.hpp>
+#include <media/DefaultMediaListener.hpp>
 #include <media/MediaManager.hpp>
 #include <wifi/DefaultUdpProcessor.hpp>
 #include <wifi/SntpManager.hpp>
@@ -6,7 +7,12 @@
 #include <wifi/WiFiManager.hpp>
 
 extern "C" void app_main() {
-    auto mediaManager = std::make_unique<alarm_clock::media::MediaManager>();
+    auto mediaListener =
+        std::make_unique<alarm_clock::media::DefaultMediaListener>();
+
+    auto mediaManager =
+        std::make_unique<alarm_clock::media::MediaManager>(mediaListener.get());
+
     auto wifiManager = std::make_unique<alarm_clock::wifi::WifiManager>();
     auto alarmManager = std::make_unique<alarm_clock::alarm::AlarmManager>();
     auto sntpClient = std::make_unique<alarm_clock::wifi::sntp::SntpClient>();
@@ -21,6 +27,7 @@ extern "C" void app_main() {
     wifiManager->Connect();
     sntpClient->Initialize();
     udpServer->Start();
+    alarmManager->Load();
 
     vTaskDelay(portMAX_DELAY);
 }

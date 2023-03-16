@@ -100,7 +100,16 @@ class UdpServer {
                     .length = 0,
                 };
 
+                ESP_LOGI(TAG, "Processing request (op: %d, length: %d).",
+                         (int)request.opCode, (int)request.length);
+
                 processor->ProcessMessage(request, response);
+
+                ESP_LOGI(TAG,
+                         "Processed request (op: %d, length: %d, status: %d, "
+                         "body length: %d).",
+                         (int)request.opCode, (int)request.length,
+                         (int)response.operationStatus, (int)response.length);
 
                 memcpy(sendBuffer.data(), receiveBuffer.data(), 12);
                 sendBuffer.data()[7] = (uint8_t)response.operationStatus;

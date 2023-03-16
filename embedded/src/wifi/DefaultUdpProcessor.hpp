@@ -7,6 +7,8 @@
 namespace alarm_clock {
 namespace wifi {
 class DefaultUdpProcessor : public UdpProcessor {
+    constexpr const static char *TAG = "udp";
+
   public:
     DefaultUdpProcessor(alarm_clock::media::MediaManager *mediaManager,
                         alarm_clock::alarm::AlarmManager *alarmManager)
@@ -14,9 +16,6 @@ class DefaultUdpProcessor : public UdpProcessor {
 
     void ProcessMessage(const RequestContext &request,
                         ResponseContext &response) override {
-        ESP_LOGI("DefaultUdpProcessor",
-                 "Processing request (op: %d, length: %d).",
-                 (int)request.opCode, (int)request.length);
 
         if (request.opCode == OpCode::kOpSimulateRingtone) {
             if (request.length != 4) {
@@ -42,18 +41,19 @@ class DefaultUdpProcessor : public UdpProcessor {
             const auto alarms = _alarmManager->GetAlarms();
             auto offset = 0U;
 
-            for (auto index = 0; index < alarms.size(); index++) {
-                if (!alarms.at(index).enabled) {
+            for (auto index = 0; index < alarms->size(); index++) {
+                if (false) {
                     continue;
                 }
 
-                if (response.availableBytes < alarmSize) {
+                if (response.availableBytes < alarmSize + 1) {
                     response.operationStatus =
                         OperationStatus::kResponseBodyTooLarge;
                     return;
                 }
 
-                std::memcpy(response.buffer + offset, &alarms.at(index),
+                response.buffer[offset++] = (uint8_t)index;
+                std::memcpy(response.buffer + offset, &alarms->at(index),
                             alarmSize);
                 offset += alarmSize;
             }
@@ -74,12 +74,12 @@ class DefaultUdpProcessor : public UdpProcessor {
             const auto alarmIndex = *request.buffer;
             auto alarms = _alarmManager->GetAlarms();
 
-            if (alarmIndex >= alarms.size()) {
+            if (alarmIndex >= alarms->size()) {
                 response.operationStatus = OperationStatus::kBadRequest;
                 return;
             }
 
-            auto alarm = &alarms.at(alarmIndex);
+            auto alarm = &alarms->at(alarmIndex);
             std::memcpy(alarm, request.buffer + 1, alarmSize);
             _alarmManager->Commit();
 

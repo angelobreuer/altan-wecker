@@ -1,10 +1,44 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:enum_flag/enum_flag.dart';
 import 'package:flutter/foundation.dart';
 import 'package:udp/udp.dart';
+
+enum WeekDay with EnumFlag {
+  kMonday,
+  kTuesday,
+  kWednesday,
+  kThursday,
+  kFriday,
+  kSaturday,
+  kSunday,
+}
+
+class Alarm {
+  final int index;
+  final String name;
+  final bool isEnabled;
+  final List<WeekDay> weekDays;
+  final int hour;
+  final int minute;
+  final int toneId;
+  final bool toneIsCategory;
+
+  const Alarm({
+    required this.index,
+    required this.name,
+    required this.isEnabled,
+    required this.weekDays,
+    required this.hour,
+    required this.minute,
+    required this.toneId,
+    required this.toneIsCategory,
+  });
+}
 
 class Client {
   static final _sender = _createSender();
@@ -51,6 +85,105 @@ class Client {
     completer.complete(response);
   }
 
+  static Future<List<Alarm>> fetchAlarms() async {
+    final request = Request(
+      opCode: OpCode.kListAlarms,
+    );
+
+    final response = await _send(request);
+    response.ensureSuccessStatusCode();
+
+    final alarms = List<Alarm>.empty(growable: true);
+
+    while (response.readBuffer.hasRemaining) {
+      final index = response.readBuffer.getUint8();
+      final name = _getFixedUtf8AsName(response.readBuffer.getUint8List(32));
+      final allFlags = response.readBuffer.getUint16(endian: Endian.little);
+      final hour = response.readBuffer.getUint8();
+      final minute = response.readBuffer.getUint8();
+      final toneId = response.readBuffer.getUint16(endian: Endian.little);
+
+      final isEnabled = (allFlags & (1 << 0)) != 0;
+      final toneIsCategory = (allFlags & (1 << 1)) != 0;
+
+      final weekDays = List<WeekDay>.empty(growable: true);
+
+      for (var index = 0; index < 7; index++) {
+        if (allFlags & (1 << (index + 2)) != 0) {
+          weekDays.add(WeekDay.values[index]);
+        }
+      }
+
+      alarms.add(
+        Alarm(
+          index: index,
+          name: name,
+          isEnabled: isEnabled,
+          weekDays: weekDays,
+          hour: hour,
+          minute: minute,
+          toneId: toneId,
+          toneIsCategory: toneIsCategory,
+        ),
+      );
+    }
+
+    return alarms;
+  }
+
+  static Uint8List _getNameAsFixedUtf8(String name) {
+    final content = utf8.encode(name);
+
+    if (content.length >= 32) {
+      return Uint8List.sublistView(Uint8List.fromList(content), 0, 32);
+    }
+
+    final buffer = Uint8List(32);
+
+    for (int index = 0; index < content.length; index++) {
+      buffer[index] = content[index];
+    }
+
+    return buffer;
+  }
+
+  static String _getFixedUtf8AsName(Uint8List name) {
+    for (int index = 0; index < 32; index++) {
+      if (name[index] == 0) {
+        return utf8.decode(Uint8List.sublistView(name, 0, index));
+      }
+    }
+
+    return utf8.decode(name);
+  }
+
+  static updateAlarm(Alarm alarm) async {
+    final request = Request(
+      opCode: OpCode.kUpdateAlarm,
+    );
+
+    var flags = alarm.isEnabled ? 1 : 0;
+
+    if (alarm.toneIsCategory) {
+      flags |= 1 << 1;
+    }
+
+    for (var weekDay in alarm.weekDays) {
+      flags |= 1 << (weekDay.index + 2);
+    }
+
+    request.buffer.putUint8(alarm.index); // 1
+    request.buffer.putUint8List(_getNameAsFixedUtf8(alarm.name)); // 1 + 32
+    request.buffer.putUint16(flags, endian: Endian.little); // 1 + 32 + 2
+    request.buffer.putUint8(alarm.hour); // 1 + 32 + 2 + 1
+    request.buffer.putUint8(alarm.minute); // 1 + 32 + 2 + 1 + 1
+    request.buffer.putUint16(alarm.toneId,
+        endian: Endian.little); // 1 + 32 + 2 + 1 + 1 + 2
+
+    final response = await _send(request);
+    response.ensureSuccessStatusCode();
+  }
+
   static simulateRingtone(int trackId) async {
     final request = Request(
       opCode: OpCode.kSimulateRingtone,
@@ -83,7 +216,8 @@ class Client {
 
     await sender.send(
       data,
-      Endpoint.unicast(InternetAddress("192.168.4.1"), port: const Port(8999)),
+      Endpoint.unicast(InternetAddress("192.168.96.68"),
+          port: const Port(8999)),
     );
 
     return await completer.future;
@@ -92,6 +226,8 @@ class Client {
 
 enum OpCode {
   kSimulateRingtone,
+  kListAlarms,
+  kUpdateAlarm,
 }
 
 enum OperationStatus {
