@@ -46,10 +46,13 @@ class MediaManager {
           _videoFrameSink{std::make_unique<alarm_clock::media::VideoFrameSink<
               VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_BYTES_PER_PIXEL * 8>>()},
           _mediaListener{mediaListener},
+          _playSemaphore{xSemaphoreCreateBinary()},
           _audioFramePlayout{std::make_unique<AudioFramePlayout>(
               audioFrameBuffer.GetReader(), _audioFrameSink.get())},
           _videoFramePlayout{std::make_unique<VideoFramePlayout>(
               videoFrameBuffer.GetReader(), _videoFrameSink.get())} {}
+
+    ~MediaManager() { vSemaphoreDelete(_playSemaphore); }
 
     void Play(uint32_t trackId) {
         _version++;
