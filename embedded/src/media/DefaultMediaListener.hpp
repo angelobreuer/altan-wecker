@@ -21,20 +21,34 @@ class DefaultMediaListener : public MediaListener {
     void OnTrackPlayEnd() override { _show = false; }
 
   private:
+    static void Fill(std::array<uint8_t, VIDEO_BYTES_PER_FRAME> *buffer, int x,
+                     int y, int w, int h) {
+        constexpr auto stride = VIDEO_WIDTH * sizeof(uint16_t);
+        auto ptr = &buffer->data()[(x * sizeof(uint16_t)) + (y * stride)];
+
+        for (auto y = 0; y < h; y++) {
+            memset(ptr, 0xFF, w);
+            ptr += stride;
+        }
+    }
+
     static void DrawSegment(std::array<uint8_t, VIDEO_BYTES_PER_FRAME> *buffer,
                             int segmentIndex, int xOffset) {
         const auto segment = _segments.at(segmentIndex);
-        const auto stride = VIDEO_WIDTH * sizeof(uint16_t);
+
+        auto offsetY = xOffset < 0 ? VIDEO_HEIGHT + xOffset * 36 : xOffset * 36;
 
         auto x0 = segment.x;
-        auto y0 = segment.y + (xOffset * 40);
+        auto y0 = segment.y + offsetY;
 
-        auto ptr = &buffer->data()[(x0 * sizeof(uint16_t)) + (y0 * stride)];
+        Fill(buffer, x0, y0, segment.w, segment.h);
+    }
 
-        for (auto y = 0; y < segment.h; y++) {
-            memset(ptr, 0xFF, segment.w);
-            ptr += stride;
-        }
+    static void DrawDot(std::array<uint8_t, VIDEO_BYTES_PER_FRAME> *buffer,
+                        int yOffset) {
+        constexpr const auto DOT_SIZE = 4;
+        Fill(buffer, VIDEO_WIDTH / 2 - DOT_SIZE / 2 + yOffset,
+             VIDEO_HEIGHT / 2 + DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
     }
 
     static void DrawDigit(std::array<uint8_t, VIDEO_BYTES_PER_FRAME> *buffer,
@@ -49,6 +63,7 @@ class DefaultMediaListener : public MediaListener {
     }
 
     static void ShowClock(void *pvParameters) {
+        static bool blink = false;
         auto listener = static_cast<DefaultMediaListener *>(pvParameters);
         auto writer = alarm_clock::media::videoFrameBuffer.GetWriter();
 
@@ -67,12 +82,21 @@ class DefaultMediaListener : public MediaListener {
 
                 DrawDigit(buffer, hourPart1, 0);
                 DrawDigit(buffer, hourPart2, 1);
-                DrawDigit(buffer, minutePart1, 2);
-                DrawDigit(buffer, minutePart2, 3);
+                DrawDigit(buffer, minutePart1, -2);
+                DrawDigit(buffer, minutePart2, -1);
+
+                blink = !blink;
+
+                if (blink) {
+                    DrawDot(buffer, -10);
+                    DrawDot(buffer, 10);
+                }
+
                 writer.Release(buffer, true);
+                vTaskDelay(pdMS_TO_TICKS(1000));
             }
 
-            vTaskDelay(pdMS_TO_TICKS(100));
+            vTaskDelay(pdMS_TO_TICKS(500));
         }
     }
 
@@ -107,9 +131,9 @@ class DefaultMediaListener : public MediaListener {
     };
 
     constexpr const static auto SEGMENT_SIZE = 10;
-    constexpr const static auto SEGMENT_LENGTH = 30;
+    constexpr const static auto SEGMENT_LENGTH = 26;
     constexpr const static auto PADDING_HORIZONTAL = 5;
-    constexpr const static auto PADDING_VERTICAL = 34;
+    constexpr const static auto PADDING_VERTICAL = 40;
 
     constexpr const static std::array<Rectangle, 7> _segments = {
         (Rectangle{
@@ -118,12 +142,14 @@ class DefaultMediaListener : public MediaListener {
             SEGMENT_SIZE,
             SEGMENT_LENGTH,
         }), // Top Horizontal
+
         (Rectangle{
             VIDEO_WIDTH / 2,
             PADDING_HORIZONTAL + SEGMENT_SIZE / 4,
             SEGMENT_SIZE,
             SEGMENT_LENGTH,
         }), // Middle Horizontal
+
         (Rectangle{
             PADDING_VERTICAL,
             PADDING_HORIZONTAL + SEGMENT_SIZE / 4,
@@ -132,26 +158,28 @@ class DefaultMediaListener : public MediaListener {
         }), // Bottom Horizontal
 
         (Rectangle{
-            PADDING_VERTICAL,
+            PADDING_VERTICAL + SEGMENT_SIZE / 4,
             PADDING_HORIZONTAL,
             SEGMENT_LENGTH * 2,
             SEGMENT_SIZE / 2,
         }), // Bottom Left
+
         (Rectangle{
-            VIDEO_WIDTH - PADDING_VERTICAL - SEGMENT_LENGTH,
+            VIDEO_WIDTH - PADDING_VERTICAL - SEGMENT_LENGTH + SEGMENT_SIZE / 4,
             PADDING_HORIZONTAL,
             SEGMENT_LENGTH * 2,
             SEGMENT_SIZE / 2,
         }), // Top Left
 
         (Rectangle{
-            PADDING_VERTICAL,
+            PADDING_VERTICAL + SEGMENT_SIZE / 4,
             SEGMENT_LENGTH + PADDING_HORIZONTAL,
             SEGMENT_LENGTH * 2,
             SEGMENT_SIZE / 2,
         }), // Bottom Right
+
         (Rectangle{
-            VIDEO_WIDTH - PADDING_VERTICAL - SEGMENT_LENGTH,
+            VIDEO_WIDTH - PADDING_VERTICAL - SEGMENT_LENGTH + SEGMENT_SIZE / 4,
             SEGMENT_LENGTH + PADDING_HORIZONTAL,
             SEGMENT_LENGTH * 2,
             SEGMENT_SIZE / 2,
