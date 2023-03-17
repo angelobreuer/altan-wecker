@@ -22,6 +22,7 @@ class SntpClient {
   public:
     void Initialize() {
         ESP_LOGI(TAG, "Initializing SNTP");
+        setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", true);
         sntp_setoperatingmode(SNTP_OPMODE_POLL);
         sntp_setservername(0, "pool.ntp.org");
         sntp_set_time_sync_notification_cb(time_sync_notification_cb);
