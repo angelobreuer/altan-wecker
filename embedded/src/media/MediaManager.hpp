@@ -76,11 +76,12 @@ class MediaManager {
             audioFrameReader(_fileSystem.get(), audioPath.data(),
                              audioFrameBuffer.GetWriter());
 
-        while (_trackId == trackId) {
+        while (_trackId == trackId && !(videoFrameReader.IsFinished() &&
+                                        audioFrameReader.IsFinished())) {
             vTaskDelay(pdMS_TO_TICKS(100));
         }
 
-        ESP_LOGI(TAG, "Stopped playing track: %d.", (int)trackId);
+        ESP_LOGI(TAG, "Finished playing track: %d.", (int)trackId);
 
         _mediaListener->OnTrackPlayEnd();
     }
@@ -89,10 +90,11 @@ class MediaManager {
         while (!_abort) {
             uint32_t trackId;
             while ((trackId = _trackId) == NO_TRACK) {
-                vTaskDelay(pdMS_TO_TICKS(100));
+                vTaskDelay(pdMS_TO_TICKS(20));
             }
 
             PlayTrackInternal((uint16_t)trackId);
+            _trackId.compare_exchange_strong(trackId, NO_TRACK);
         }
     }
 
