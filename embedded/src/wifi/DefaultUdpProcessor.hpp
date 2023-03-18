@@ -42,7 +42,7 @@ class DefaultUdpProcessor : public UdpProcessor {
             auto offset = 0U;
 
             for (auto index = 0; index < alarms->size(); index++) {
-                if (false) {
+                if (!alarms->at(index).IsConfigured()) {
                     continue;
                 }
 

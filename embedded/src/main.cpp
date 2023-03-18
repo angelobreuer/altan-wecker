@@ -1,13 +1,17 @@
+#include <alarm/AlarmController.hpp>
 #include <alarm/AlarmManager.hpp>
 #include <button/ButtonController.hpp>
 #include <media/DefaultMediaListener.hpp>
 #include <media/MediaManager.hpp>
+#include <nvs_flash.h>
 #include <wifi/DefaultUdpProcessor.hpp>
 #include <wifi/SntpManager.hpp>
 #include <wifi/UdpServer.hpp>
 #include <wifi/WiFiManager.hpp>
 
 extern "C" void app_main() {
+    ESP_ERROR_CHECK(nvs_flash_init());
+
     auto mediaListener =
         std::make_unique<alarm_clock::media::DefaultMediaListener>();
 
@@ -28,6 +32,10 @@ extern "C" void app_main() {
 
     auto udpServer =
         std::make_unique<alarm_clock::wifi::UdpServer>(udpProcessor.get());
+
+    auto alarmController =
+        std::make_unique<alarm_clock::alarm::AlarmController>(
+            alarmManager.get(), mediaManager.get());
 
     wifiManager->Connect();
     sntpClient->Initialize();
