@@ -1,4 +1,5 @@
 #include <alarm/AlarmManager.hpp>
+#include <button/ButtonController.hpp>
 #include <media/DefaultMediaListener.hpp>
 #include <media/MediaManager.hpp>
 #include <wifi/DefaultUdpProcessor.hpp>
@@ -12,6 +13,10 @@ extern "C" void app_main() {
 
     auto mediaManager =
         std::make_unique<alarm_clock::media::MediaManager>(mediaListener.get());
+
+    auto buttonController =
+        std::make_unique<alarm_clock::button::ButtonController>(
+            mediaManager.get());
 
     auto wifiManager = std::make_unique<alarm_clock::wifi::WifiManager>();
     auto alarmManager = std::make_unique<alarm_clock::alarm::AlarmManager>();
