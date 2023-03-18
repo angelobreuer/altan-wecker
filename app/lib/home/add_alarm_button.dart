@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:alarm_clock/client.dart';
 import 'package:flutter/material.dart';
@@ -21,12 +22,14 @@ class AddAlarmButton extends StatelessWidget {
             weekDays: [WeekDay.kFriday],
           ));*/
 
-          final alarms = await Client.fetchAlarms();
-          print('a');
+          /*final alarms = await Client.fetchAlarms();
+          print('a');*/
+
+          await Client.simulateRingtone(Random().nextInt(255));
         },
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(11),
             border: Border.all(color: Colors.white.withOpacity(0.2)),
           ),
           padding: const EdgeInsets.symmetric(

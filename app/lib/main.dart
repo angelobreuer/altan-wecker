@@ -41,13 +41,15 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: const Color(0xFF17191A),
         title: const Text("Wecker", textAlign: TextAlign.center),
       ),
-      body: Center(
-        child: Column(
-          children: <Widget>[
-            TimeView(),
-            const SizedBox(height: 30),
-            AlarmList(),
-          ],
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            children: <Widget>[
+              TimeView(),
+              const SizedBox(height: 30),
+              AlarmList(),
+            ],
+          ),
         ),
       ),
     );

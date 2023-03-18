@@ -1,6 +1,20 @@
+import 'package:alarm_clock/client.dart';
 import 'package:flutter/material.dart';
 
-class Alarm extends StatelessWidget {
+class AlarmView extends StatelessWidget {
+  final Alarm alarm;
+  final Function(Alarm alarm) updateAlarm;
+
+  const AlarmView({
+    super.key,
+    required this.alarm,
+    required this.updateAlarm,
+  });
+
+  _formatTime(int value) {
+    return value < 10 ? "0$value" : value.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -17,14 +31,22 @@ class Alarm extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              "06:00",
-              style: TextStyle(fontSize: 22),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(alarm.name),
+                Text(
+                  "${_formatTime(alarm.hour)}:${_formatTime(alarm.minute)}",
+                  style: TextStyle(fontSize: 40),
+                ),
+              ],
             ),
             Switch(
-              value: true,
-              activeColor: Colors.black,
-              onChanged: (value) {},
+              value: alarm.isEnabled,
+              activeColor: Colors.white,
+              onChanged: (value) {
+                updateAlarm(alarm.copyWith(isEnabled: !alarm.isEnabled));
+              },
             )
           ],
         ),

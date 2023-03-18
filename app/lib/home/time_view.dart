@@ -1,6 +1,42 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-class TimeView extends StatelessWidget {
+class TimeView extends StatefulWidget {
+  @override
+  State<TimeView> createState() => _TimeViewState();
+}
+
+class _TimeViewState extends State<TimeView> {
+  late Timer _timer;
+  late DateTime _dateTime;
+
+  void _startTimer() {
+    const oneSec = const Duration(seconds: 1);
+
+    _timer = new Timer.periodic(
+      oneSec,
+      (Timer timer) {
+        setState(() {
+          _dateTime = DateTime.now();
+        });
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+    _dateTime = DateTime.now();
+  }
+
   _getDayOfWeek(int weekday) {
     switch (weekday) {
       case DateTime.monday:
@@ -55,20 +91,35 @@ class TimeView extends StatelessWidget {
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              DateTime.now().hour.toString().padLeft(2, '0'),
+              _dateTime.hour.toString().padLeft(2, '0'),
               style: const TextStyle(fontSize: 80, fontWeight: FontWeight.bold),
             ),
             const Text(":", style: TextStyle(fontSize: 50)),
-            Text(
-              DateTime.now().minute.toString().padLeft(2, '0'),
-              style: const TextStyle(fontSize: 80, fontWeight: FontWeight.bold),
-            ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _dateTime.minute.toString().padLeft(2, '0'),
+                  style: const TextStyle(
+                      fontSize: 80, fontWeight: FontWeight.bold),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(top: 22),
+                  child: Text(
+                    _dateTime.second.toString().padLeft(2, '0'),
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                )
+              ],
+            )
           ],
         ),
         Text(
-          "${_getDayOfWeek(DateTime.now().weekday)}, ${DateTime.now().day}. ${_getNameOfMonth(DateTime.now().month)} ${DateTime.now().year}",
+          "${_getDayOfWeek(_dateTime.weekday)}, ${_dateTime.day}. ${_getNameOfMonth(_dateTime.month)} ${_dateTime.year}",
           style: TextStyle(fontSize: 20, color: Colors.grey.shade400),
         ),
       ],

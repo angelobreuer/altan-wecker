@@ -38,6 +38,28 @@ class Alarm {
     required this.toneId,
     required this.toneIsCategory,
   });
+
+  Alarm copyWith({
+    int? index,
+    String? name,
+    bool? isEnabled,
+    List<WeekDay>? weekDays,
+    int? hour,
+    int? minute,
+    int? toneId,
+    bool? toneIsCategory,
+  }) {
+    return Alarm(
+      index: index ?? this.index,
+      name: name ?? this.name,
+      isEnabled: isEnabled ?? this.isEnabled,
+      weekDays: weekDays ?? this.weekDays,
+      hour: hour ?? this.hour,
+      minute: minute ?? this.minute,
+      toneId: toneId ?? this.toneId,
+      toneIsCategory: toneIsCategory ?? this.toneIsCategory,
+    );
+  }
 }
 
 class Client {
