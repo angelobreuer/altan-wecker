@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <driver/dac.h>
 #include <driver/gptimer.h>
 #include <freertos/FreeRTOS.h>
@@ -67,7 +68,7 @@ class AudioFrameSink
     }
 
   private:
-    volatile uint32_t _sampleCounter;
+    std::atomic<uint32_t> _sampleCounter;
     const std::array<uint8_t, SampleRate * Channels * BytesPerSample>
         *volatile _buffer;
     SemaphoreHandle_t _playoutSemaphoreHandle;
