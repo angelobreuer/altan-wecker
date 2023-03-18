@@ -17,8 +17,8 @@ class DefaultMediaListener : public MediaListener {
         xTaskCreate(&ShowClock, "media listener", 4096, this, 0, nullptr);
     }
 
-    void OnTrackPlayStart() override { _show = true; }
-    void OnTrackPlayEnd() override { _show = false; }
+    void OnTrackPlayStart() override { _show = false; }
+    void OnTrackPlayEnd() override { _show = true; }
 
   private:
     static void Fill(std::array<uint8_t, VIDEO_BYTES_PER_FRAME> *buffer, int x,

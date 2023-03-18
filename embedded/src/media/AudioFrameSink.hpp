@@ -60,7 +60,7 @@ class AudioFrameSink
     void
     Process(const std::array<uint8_t, SampleRate * Channels * BytesPerSample>
                 *buffer) override {
-        xSemaphoreTake(_playoutSemaphoreHandle, portMAX_DELAY);
+        // xSemaphoreTake(_playoutSemaphoreHandle, portMAX_DELAY);
 
         _sampleCounter = 0;
         _buffer = buffer;
@@ -92,8 +92,10 @@ class AudioFrameSink
 
         if (_sampleCounter >= SampleRate) {
             BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
-            xSemaphoreGiveFromISR(_playoutSemaphoreHandle,
-                                  &pxHigherPriorityTaskWoken);
+
+            /*xSemaphoreGiveFromISR(_playoutSemaphoreHandle,
+                                  &pxHigherPriorityTaskWoken);*/
+
             _buffer = nullptr;
             return pxHigherPriorityTaskWoken == pdTRUE;
         }

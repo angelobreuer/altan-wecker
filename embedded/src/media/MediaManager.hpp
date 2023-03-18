@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
@@ -39,67 +40,66 @@ constexpr const static char *TAG = "media";
 class MediaManager {
   public:
     MediaManager(alarm_clock::media::MediaListener *mediaListener)
-        : _version{0},
-          _fileSystem{std::make_unique<alarm_clock::memory::FileSystem>()},
+        : _fileSystem{std::make_unique<alarm_clock::memory::FileSystem>()},
           _audioFrameSink{std::make_unique<alarm_clock::media::AudioFrameSink<
               AUDIO_SAMPLE_RATE, AUDIO_CHANNELS, AUDIO_BYTES_PER_SAMPLE>>()},
           _videoFrameSink{std::make_unique<alarm_clock::media::VideoFrameSink<
               VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_BYTES_PER_PIXEL * 8>>()},
           _mediaListener{mediaListener},
-          _playSemaphore{xSemaphoreCreateBinary()},
           _audioFramePlayout{std::make_unique<AudioFramePlayout>(
               audioFrameBuffer.GetReader(), _audioFrameSink.get())},
           _videoFramePlayout{std::make_unique<VideoFramePlayout>(
-              videoFrameBuffer.GetReader(), _videoFrameSink.get())} {}
-
-    ~MediaManager() { vSemaphoreDelete(_playSemaphore); }
-
-    void Play(uint32_t trackId) {
-        _version++;
-        _trackId = trackId;
-
-        xSemaphoreGive(_playSemaphore);
+              videoFrameBuffer.GetReader(), _videoFrameSink.get())},
+          _trackId{NO_TRACK}, _abort{false} {
         xTaskCreate(&PlayInternal, "Media Manager", 4096, this, 10, nullptr);
     }
 
+    void Play(uint32_t trackId) { _trackId = trackId; }
+    void Stop() { _trackId = NO_TRACK; }
+
   private:
-    static void PlayInternal(void *pvParameters) {
-        auto manager = static_cast<MediaManager *>(pvParameters);
+    void PlayTrackInternal(uint16_t trackId) {
+        ESP_LOGI(TAG, "Playing track: %d.", (int)trackId);
 
-        const uint16_t trackId = manager->_trackId;
-        const int32_t currentVersion = ++manager->_version;
+        _mediaListener->OnTrackPlayStart();
 
-        ESP_LOGI(TAG, "Playing track: %d.", trackId);
+        std::array<char, 32> videoPath = {"/sdcard0/video-"};
+        std::array<char, 32> audioPath = {"/sdcard0/audio-"};
+        itoa((int)trackId, videoPath.data() + 15, 10);
+        itoa((int)trackId, audioPath.data() + 15, 10);
 
-        alarm_clock::media::AudioFrameSink<AUDIO_SAMPLE_RATE, AUDIO_CHANNELS,
-                                           AUDIO_BYTES_PER_SAMPLE>
-            audioFrameSink;
+        const alarm_clock::media::FrameReader<VIDEO_BYTES_PER_FRAME>
+            videoFrameReader(_fileSystem.get(), videoPath.data(),
+                             videoFrameBuffer.GetWriter());
 
-        std::array<char, 64> path = {"/sdcard0/video-"};
-        itoa((int)trackId, path.data() + 15, 10);
-
-        alarm_clock::media::FrameReader<VIDEO_BYTES_PER_FRAME> videoFrameReader(
-            manager->_fileSystem.get(), path.data(),
-            videoFrameBuffer.GetWriter());
-
-        path = {"/sdcard0/audio-"};
-        itoa((int)trackId, path.data() + 15, 10);
-        manager->_mediaListener->OnTrackPlayStart();
-
-        alarm_clock::media::FrameReader<AUDIO_BYTES_PER_SECOND>
-            audioFrameReader(manager->_fileSystem.get(), path.data(),
+        const alarm_clock::media::FrameReader<AUDIO_BYTES_PER_SECOND>
+            audioFrameReader(_fileSystem.get(), audioPath.data(),
                              audioFrameBuffer.GetWriter());
 
-        xSemaphoreTake(manager->_playSemaphore, portMAX_DELAY);
+        while (_trackId == trackId) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
 
-        ESP_LOGI(TAG, "Stopped playing track: %d.", trackId);
+        ESP_LOGI(TAG, "Stopped playing track: %d.", (int)trackId);
 
-        manager->_mediaListener->OnTrackPlayEnd();
-        vTaskDelete(nullptr);
+        _mediaListener->OnTrackPlayEnd();
     }
 
-    uint16_t _trackId;
-    int32_t _version;
+    void PlayInternal() {
+        while (!_abort) {
+            uint32_t trackId;
+            while ((trackId = _trackId) == NO_TRACK) {
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+
+            PlayTrackInternal((uint16_t)trackId);
+        }
+    }
+
+    static void PlayInternal(void *pvParameters) {
+        static_cast<MediaManager *>(pvParameters)->PlayInternal();
+        vTaskDelete(nullptr);
+    }
 
     std::unique_ptr<alarm_clock::memory::FileSystem> _fileSystem;
     std::unique_ptr<alarm_clock::media::AudioFrameSink<
@@ -109,7 +109,6 @@ class MediaManager {
         VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_BYTES_PER_PIXEL * 8>>
         _videoFrameSink;
     alarm_clock::media::MediaListener *_mediaListener;
-    SemaphoreHandle_t _playSemaphore;
 
     constexpr const static auto AUDIO_PLAYOUT_FREQ = pdMS_TO_TICKS(1000);
     constexpr const static auto VIDEO_PLAYOUT_FREQ =
@@ -123,6 +122,10 @@ class MediaManager {
 
     std::unique_ptr<AudioFramePlayout> _audioFramePlayout;
     std::unique_ptr<VideoFramePlayout> _videoFramePlayout;
+    std::atomic<uint32_t> _trackId;
+    bool _abort;
+
+    constexpr const static uint32_t NO_TRACK = 0xFFFFFFFF;
 };
 } // namespace media
 } // namespace alarm_clock
