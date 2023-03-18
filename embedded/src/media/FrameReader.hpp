@@ -11,11 +11,11 @@ template <size_t UnitSize> class FrameReader {
     FrameReader(
         alarm_clock::memory::FileSystem *fileSystem, const char *path,
         alarm_clock::media::FrameBufferWriter<UnitSize> frameBufferWriter)
-        : _abort{false}, _fileSystem{fileSystem}, _path{path},
+        : _abort{false}, _finished{false}, _fileSystem{fileSystem}, _path{path},
           _frameBufferWriter{frameBufferWriter}, _abortSemaphore{
                                                      xSemaphoreCreateBinary()} {
         auto result =
-            xTaskCreate(RunTask, "Frame Reader", 4096, this, 100, nullptr);
+            xTaskCreate(RunTask, "Frame Reader", 3072, this, 100, nullptr);
 
         if (result == pdFAIL) {
             ESP_LOGE(TAG, "Failed to create frame reader task!");
@@ -24,12 +24,12 @@ template <size_t UnitSize> class FrameReader {
     }
 
     ~FrameReader() {
-        ESP_LOGE(TAG, "Disposing frame reader");
         _abort = true;
         xSemaphoreTake(_abortSemaphore, portMAX_DELAY);
         vSemaphoreDelete(_abortSemaphore);
-        ESP_LOGE(TAG, "finished");
     }
+
+    bool IsFinished() const { return _finished; }
 
   private:
     static void RunTask(void *pvParameters) {
@@ -60,9 +60,11 @@ template <size_t UnitSize> class FrameReader {
         }
 
         xSemaphoreGive(_abortSemaphore);
+        _finished = true;
     }
 
     bool _abort;
+    bool _finished;
     alarm_clock::memory::FileSystem *_fileSystem;
     const char *_path;
     alarm_clock::media::FrameBufferWriter<UnitSize> _frameBufferWriter;
