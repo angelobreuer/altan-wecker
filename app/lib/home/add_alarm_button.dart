@@ -1,7 +1,5 @@
-import 'dart:convert';
-import 'dart:math';
-
 import 'package:alarm_clock/client.dart';
+import 'package:alarm_clock/home/alarm_editor.dart';
 import 'package:flutter/material.dart';
 
 class AddAlarmButton extends StatelessWidget {
@@ -11,21 +9,22 @@ class AddAlarmButton extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
       child: GestureDetector(
         onTap: () async {
-          /*await Client.updateAlarm(Alarm(
-            hour: 7,
-            index: 0,
-            minute: 0,
-            name: "Abc",
-            isEnabled: true,
-            toneIsCategory: true,
-            toneId: 0,
-            weekDays: [WeekDay.kFriday],
-          ));*/
-
-          /*final alarms = await Client.fetchAlarms();
-          print('a');*/
-
-          await Client.simulateRingtone(Random().nextInt(255));
+          await showModalBottomSheet(
+            context: context,
+            builder: (context) => AlarmEditor(
+              alarm: Alarm(
+                index: -1,
+                name: "Neuer Alarm",
+                isEnabled: true,
+                weekDays: WeekDay.values,
+                hour: 6,
+                minute: 0,
+                toneId: 0,
+                toneIsCategory: false,
+              ),
+            ),
+            backgroundColor: Colors.transparent,
+          );
         },
         child: Container(
           decoration: BoxDecoration(

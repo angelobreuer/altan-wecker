@@ -48,6 +48,11 @@ class _MyHomePageState extends State<MyHomePage> {
               TimeView(),
               const SizedBox(height: 30),
               AlarmList(),
+              ElevatedButton(
+                  onPressed: () {
+                    Client.simulateRingtone(20);
+                  },
+                  child: Text("a")),
             ],
           ),
         ),
