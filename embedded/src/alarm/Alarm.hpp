@@ -11,7 +11,7 @@ enum class AlarmFlags : uint16_t {
     kNone = 0,
 
     kEnabled = 1 << 0,
-    kRandomCategory = 1 << 1,
+    kRandom = 1 << 1,
 
     kMonday = 1 << 2,
     kTuesday = 1 << 3,

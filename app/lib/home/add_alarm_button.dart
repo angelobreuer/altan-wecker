@@ -3,13 +3,16 @@ import 'package:alarm_clock/home/alarm_editor.dart';
 import 'package:flutter/material.dart';
 
 class AddAlarmButton extends StatelessWidget {
+  final Function(Alarm alarm) onAlarmCreated;
+  const AddAlarmButton({super.key, required this.onAlarmCreated});
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
       child: GestureDetector(
         onTap: () async {
-          await showModalBottomSheet(
+          final alarm = await showModalBottomSheet<Alarm?>(
             context: context,
             builder: (context) => AlarmEditor(
               alarm: Alarm(
@@ -20,11 +23,15 @@ class AddAlarmButton extends StatelessWidget {
                 hour: 6,
                 minute: 0,
                 toneId: 0,
-                toneIsCategory: false,
+                random: true,
               ),
             ),
             backgroundColor: Colors.transparent,
           );
+
+          if (alarm != null) {
+            onAlarmCreated(alarm);
+          }
         },
         child: Container(
           decoration: BoxDecoration(

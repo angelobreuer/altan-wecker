@@ -1,6 +1,7 @@
 #pragma once
 
 #include <alarm/AlarmManager.hpp>
+#include <esp_random.h>
 #include <media/MediaManager.hpp>
 
 namespace alarm_clock {
@@ -28,10 +29,19 @@ class AlarmController {
 
             const auto alarm = _alarmManager->GetAlarmToInvoke();
 
-            if (alarm != nullptr) {
-                ESP_LOGI(TAG, "Invoking alarm: %s.", alarm->name.data());
-                _mediaManager->Play(alarm->toneId);
+            if (alarm == nullptr) {
+                continue;
             }
+
+            ESP_LOGI(TAG, "Invoking alarm: %s.", alarm->name.data());
+
+            auto toneId = alarm->toneId;
+
+            if (alarm->HasFlag(alarm_clock::alarm::AlarmFlags::kRandom)) {
+                toneId = (uint16_t)(esp_random() % (253 + 1));
+            }
+
+            _mediaManager->Play(toneId, true);
         }
     }
 

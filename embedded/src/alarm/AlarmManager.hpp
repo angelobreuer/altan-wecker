@@ -90,7 +90,7 @@ class AlarmManager {
     }
 
     time_t GetNextInvocationTime(Alarm alarm, const time_t currentTimeValue) {
-        if (!alarm.IsConfigured()) {
+        if (!alarm.IsConfigured() || !alarm.IsEnabled()) {
             return 0;
         }
 

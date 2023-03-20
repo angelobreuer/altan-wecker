@@ -54,7 +54,11 @@ class MediaManager {
         xTaskCreate(&PlayInternal, "Media Manager", 4096, this, 10, nullptr);
     }
 
-    void Play(uint32_t trackId) { _trackId = trackId; }
+    void Play(uint32_t trackId, bool loop = false) {
+        _trackId = trackId;
+        _loop = loop;
+    }
+
     void Stop() { _trackId = NO_TRACK; }
 
   private:
@@ -94,7 +98,10 @@ class MediaManager {
             }
 
             PlayTrackInternal((uint16_t)trackId);
-            _trackId.compare_exchange_strong(trackId, NO_TRACK);
+
+            if (!_loop) {
+                _trackId.compare_exchange_strong(trackId, NO_TRACK);
+            }
         }
     }
 
@@ -126,6 +133,7 @@ class MediaManager {
     std::unique_ptr<VideoFramePlayout> _videoFramePlayout;
     std::atomic<uint32_t> _trackId;
     bool _abort;
+    bool _loop;
 
     constexpr const static uint32_t NO_TRACK = 0xFFFFFFFF;
 };

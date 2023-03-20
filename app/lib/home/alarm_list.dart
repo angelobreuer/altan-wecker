@@ -44,7 +44,21 @@ class _AlarmListState extends State<AlarmList> {
     return Column(
       children: [
         ..._buildInnerList(),
-        AddAlarmButton(),
+        _alarms == null || _alarms!.length >= 16
+            ? Container()
+            : AddAlarmButton(
+                onAlarmCreated: (alarm) {
+                  int index = 0;
+                  for (; index < 16; index++) {
+                    if (!_alarms!.any((element) => element.index == index)) {
+                      break;
+                    }
+                  }
+
+                  Client.updateAlarm(alarm.copyWith(index: index));
+                  _loadAlarms();
+                },
+              )
       ],
     );
   }

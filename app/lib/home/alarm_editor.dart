@@ -216,15 +216,11 @@ class _AlarmEditorState extends State<AlarmEditor> {
               ],
             ),
           ),
-          const _SectionHeader(title: "Weckton"),
+          /*const _SectionHeader(title: "Weckton"),
           Padding(
             padding: const EdgeInsets.only(right: 8.0, top: 8),
             child: ElevatedButton(
-              onPressed: () {
-                showTimePicker(
-                    context: context,
-                    initialTime: const TimeOfDay(hour: 1, minute: 2));
-              },
+              onPressed: () {},
               style: ButtonStyle(
                 padding: MaterialStateProperty.all(const EdgeInsets.symmetric(
                   vertical: 16,
@@ -246,7 +242,7 @@ class _AlarmEditorState extends State<AlarmEditor> {
                 ],
               ),
             ),
-          ),
+          ),*/
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

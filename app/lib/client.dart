@@ -26,7 +26,7 @@ class Alarm {
   final int hour;
   final int minute;
   final int toneId;
-  final bool toneIsCategory;
+  final bool random;
 
   const Alarm({
     required this.index,
@@ -36,7 +36,7 @@ class Alarm {
     required this.hour,
     required this.minute,
     required this.toneId,
-    required this.toneIsCategory,
+    required this.random,
   });
 
   Alarm copyWith({
@@ -47,7 +47,7 @@ class Alarm {
     int? hour,
     int? minute,
     int? toneId,
-    bool? toneIsCategory,
+    bool? random,
   }) {
     return Alarm(
       index: index ?? this.index,
@@ -57,7 +57,7 @@ class Alarm {
       hour: hour ?? this.hour,
       minute: minute ?? this.minute,
       toneId: toneId ?? this.toneId,
-      toneIsCategory: toneIsCategory ?? this.toneIsCategory,
+      random: random ?? this.random,
     );
   }
 }
@@ -126,7 +126,7 @@ class Client {
       final toneId = response.readBuffer.getUint16(endian: Endian.little);
 
       final isEnabled = (allFlags & (1 << 0)) != 0;
-      final toneIsCategory = (allFlags & (1 << 1)) != 0;
+      final random = (allFlags & (1 << 1)) != 0;
 
       final weekDays = List<WeekDay>.empty(growable: true);
 
@@ -145,7 +145,7 @@ class Client {
           hour: hour,
           minute: minute,
           toneId: toneId,
-          toneIsCategory: toneIsCategory,
+          random: random,
         ),
       );
     }
@@ -180,13 +180,16 @@ class Client {
   }
 
   static updateAlarm(Alarm alarm) async {
+    alarm = alarm.copyWith(
+        random: true); // TODO: tone selection currently not implemented in app
+
     final request = Request(
       opCode: OpCode.kUpdateAlarm,
     );
 
     var flags = alarm.isEnabled ? 1 : 0;
 
-    if (alarm.toneIsCategory) {
+    if (alarm.random) {
       flags |= 1 << 1;
     }
 
@@ -217,6 +220,12 @@ class Client {
     response.ensureSuccessStatusCode();
   }
 
+  static ping() async {
+    final request = Request(opCode: OpCode.kPing);
+    final response = await _send(request);
+    response.ensureSuccessStatusCode();
+  }
+
   static Future<Response> _send(Request request) async {
     final sender = await _sender;
     final correlationId = Random.secure().nextInt(0xFFFFFFFF);
@@ -238,8 +247,7 @@ class Client {
 
     await sender.send(
       data,
-      Endpoint.unicast(InternetAddress("192.168.96.68"),
-          port: const Port(8999)),
+      Endpoint.broadcast(port: const Port(8999)),
     );
 
     return await completer.future;
@@ -250,6 +258,7 @@ enum OpCode {
   kSimulateRingtone,
   kListAlarms,
   kUpdateAlarm,
+  kPing,
 }
 
 enum OperationStatus {

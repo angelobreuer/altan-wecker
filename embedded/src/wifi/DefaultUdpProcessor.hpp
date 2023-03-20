@@ -87,6 +87,16 @@ class DefaultUdpProcessor : public UdpProcessor {
             return;
         }
 
+        if (request.opCode == OpCode::kPing) {
+            if (request.length != 0) {
+                response.operationStatus = OperationStatus::kBadRequest;
+                return;
+            }
+
+            response.operationStatus = OperationStatus::kSuccess;
+            return;
+        }
+
         response.operationStatus = OperationStatus::kNotImplemented;
     }
 

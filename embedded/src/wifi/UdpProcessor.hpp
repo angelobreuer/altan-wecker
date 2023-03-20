@@ -9,6 +9,7 @@ enum class OpCode {
     kOpSimulateRingtone,
     kOpListAlarms,
     kUpdateAlarm,
+    kPing,
 };
 
 enum class OperationStatus {

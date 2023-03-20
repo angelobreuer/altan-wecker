@@ -12,7 +12,7 @@ class ButtonController {
   public:
     ButtonController(alarm_clock::media::MediaManager *mediaManager)
         : _abort{false}, _button{GPIO_NUM_26}, _mediaManager{mediaManager} {
-        xTaskCreate(&RunTaskInternal, "Button", 2048, this, 1000, nullptr);
+        xTaskCreate(&RunTaskInternal, "Button", 4096, this, 1000, nullptr);
     }
 
     ~ButtonController() { _abort = true; }
