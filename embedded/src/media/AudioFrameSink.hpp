@@ -98,6 +98,8 @@ class AudioFrameSink
                                   &pxHigherPriorityTaskWoken);*/
 
             _buffer = nullptr;
+            _sampleCounter = 0;
+            dac_output_voltage(DAC_CHANNEL_1, 0);
             return pxHigherPriorityTaskWoken == pdTRUE;
         }
 

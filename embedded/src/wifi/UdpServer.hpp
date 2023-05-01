@@ -60,8 +60,7 @@ class UdpServer {
                  (struct sockaddr *)&destinationAddress,
                  sizeof(destinationAddress));
 
-            struct sockaddr_storage
-                source_addr; // Large enough for both IPv4 or IPv6
+            struct sockaddr_storage source_addr;
             socklen_t socklen = sizeof(source_addr);
 
             while (1) {

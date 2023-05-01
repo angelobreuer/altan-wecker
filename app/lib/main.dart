@@ -50,7 +50,7 @@ class _MyHomePageState extends State<MyHomePage> {
               AlarmList(),
               ElevatedButton(
                   onPressed: () {
-                    Client.simulateRingtone(30);
+                    Client.simulateRingtone(21);
                   },
                   child: Text("a")),
             ],

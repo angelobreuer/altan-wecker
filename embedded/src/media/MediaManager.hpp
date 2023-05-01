@@ -72,22 +72,29 @@ class MediaManager {
         itoa((int)trackId, videoPath.data() + 15, 10);
         itoa((int)trackId, audioPath.data() + 15, 10);
 
-        const alarm_clock::media::FrameReader<VIDEO_BYTES_PER_FRAME>
-            videoFrameReader(_fileSystem.get(), videoPath.data(),
-                             videoFrameBuffer.GetWriter());
+        alarm_clock::media::FrameReader<VIDEO_BYTES_PER_FRAME> videoFrameReader(
+            _fileSystem.get(), videoPath.data(), videoFrameBuffer.GetWriter());
 
-        const alarm_clock::media::FrameReader<AUDIO_BYTES_PER_SECOND>
+        alarm_clock::media::FrameReader<AUDIO_BYTES_PER_SECOND>
             audioFrameReader(_fileSystem.get(), audioPath.data(),
                              audioFrameBuffer.GetWriter());
 
-        while (_trackId == trackId && !(videoFrameReader.IsFinished() &&
-                                        audioFrameReader.IsFinished())) {
+        while (!(_trackId != trackId || (videoFrameReader.IsFinished() &&
+                                         audioFrameReader.IsFinished()))) {
             vTaskDelay(pdMS_TO_TICKS(100));
         }
 
         ESP_LOGI(TAG, "Finished playing track: %d.", (int)trackId);
 
+        videoFrameReader.Abort();
+        audioFrameReader.Abort();
         _mediaListener->OnTrackPlayEnd();
+
+        // wait for full finish before playing next
+        while (_trackId == trackId && !(videoFrameReader.IsFinished() &&
+                                        audioFrameReader.IsFinished())) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
     }
 
     void PlayInternal() {

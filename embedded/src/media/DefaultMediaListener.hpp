@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+#include <cmath>
 #include <ctime>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -63,44 +65,59 @@ class DefaultMediaListener : public MediaListener {
     }
 
     static void ShowClock(void *pvParameters) {
-        static bool blink = false;
+        static bool blink{false};
         auto listener = static_cast<DefaultMediaListener *>(pvParameters);
-        auto writer = alarm_clock::media::videoFrameBuffer.GetWriter();
+
+        auto videoFrameWriter =
+            alarm_clock::media::videoFrameBuffer.GetWriter();
+
+        auto audioFrameWriter =
+            alarm_clock::media::audioFrameBuffer.GetWriter();
 
         while (true) {
-            while (listener->_show) {
-                auto buffer = writer.Rent();
-                buffer->fill(0);
+            if (listener->_show) {
+                auto lastWakeTime = xTaskGetTickCount();
 
-                std::time_t time = std::time(0);
-                std::tm *now = std::localtime(&time);
+                do {
+                    auto videoFrame = videoFrameWriter.Rent();
+                    auto audioFrame = audioFrameWriter.Rent();
 
-                const auto hourPart1 = now->tm_hour / 10;
-                const auto hourPart2 = now->tm_hour % 10;
-                const auto minutePart1 = now->tm_min / 10;
-                const auto minutePart2 = now->tm_min % 10;
+                    videoFrame->fill(0);
+                    audioFrame->fill(0);
 
-                DrawDigit(buffer, hourPart1, 0);
-                DrawDigit(buffer, hourPart2, 1);
-                DrawDigit(buffer, minutePart1, -2);
-                DrawDigit(buffer, minutePart2, -1);
+                    std::time_t time = std::time(0);
+                    std::tm *now = std::localtime(&time);
 
-                blink = !blink;
+                    const auto hourPart1 = now->tm_hour / 10;
+                    const auto hourPart2 = now->tm_hour % 10;
+                    const auto minutePart1 = now->tm_min / 10;
+                    const auto minutePart2 = now->tm_min % 10;
 
-                if (blink) {
-                    DrawDot(buffer, -10);
-                    DrawDot(buffer, 10);
-                }
+                    DrawDigit(videoFrame, hourPart1, 0);
+                    DrawDigit(videoFrame, hourPart2, 1);
+                    DrawDigit(videoFrame, minutePart1, -2);
+                    DrawDigit(videoFrame, minutePart2, -1);
 
-                writer.Release(buffer, true);
-                vTaskDelay(pdMS_TO_TICKS(1000));
+                    blink = !blink;
+
+                    if (blink) {
+                        DrawDot(videoFrame, -10);
+                        DrawDot(videoFrame, 10);
+                    }
+
+                    videoFrameWriter.Release(videoFrame, true);
+                    audioFrameWriter.Release(audioFrame, true);
+
+                    vTaskDelayUntil(&lastWakeTime,
+                                    pdMS_TO_TICKS(1000)); // 1 fps
+                } while (listener->_show);
+
+                vTaskDelay(pdMS_TO_TICKS(50));
             }
-
-            vTaskDelay(pdMS_TO_TICKS(500));
         }
     }
 
-    bool _show;
+    std::atomic<bool> _show;
 
     constexpr const static std::array<uint8_t, 10> digits = {
         // 1 << 0: Top Horizontal

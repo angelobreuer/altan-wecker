@@ -23,6 +23,8 @@ template <size_t UnitSize> class FrameReader {
         }
     }
 
+    void Abort() { _abort = true; }
+
     ~FrameReader() {
         _abort = true;
         xSemaphoreTake(_abortSemaphore, portMAX_DELAY);

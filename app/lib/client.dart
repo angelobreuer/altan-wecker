@@ -226,18 +226,14 @@ class Client {
     response.ensureSuccessStatusCode();
   }
 
-  static Future<Response> _send(Request request) async {
+  static Future<void> _sendInternal(
+      int correlationId, Request request, ByteData innerPayload) async {
     final sender = await _sender;
-    final correlationId = Random.secure().nextInt(0xFFFFFFFF);
-    final completer = Completer<Response>();
-    _pendingRequests[correlationId] = completer;
-
     final payload = WriteBuffer();
     payload.putUint8List(Uint8List.fromList(_packetMagic));
     payload.putUint8(request.opCode.index);
     payload.putUint32(correlationId, endian: Endian.little);
 
-    final innerPayload = request.buffer.done();
     payload.putUint8List(Uint8List.view(innerPayload.buffer,
         innerPayload.offsetInBytes, innerPayload.lengthInBytes));
 
@@ -247,10 +243,29 @@ class Client {
 
     await sender.send(
       data,
-      Endpoint.broadcast(port: const Port(8999)),
+      Endpoint.broadcast(
+          /*InternetAddress("192.168.178.177"),*/
+          port: const Port(8999)),
     );
+  }
 
-    return await completer.future;
+  static Future<Response> _send(Request request) async {
+    final correlationId = Random.secure().nextInt(0xFFFFFFFF);
+    final innerPayload = request.buffer.done();
+    final completer = Completer<Response>();
+    _pendingRequests[correlationId] = completer;
+
+    await _sendInternal(correlationId, request, innerPayload);
+
+    final timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _sendInternal(correlationId, request, innerPayload);
+    });
+
+    try {
+      return await completer.future;
+    } finally {
+      timer.cancel();
+    }
   }
 }
 
